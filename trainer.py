@@ -7,18 +7,18 @@ import os
 # from tensorboardX import SummaryWriter
 
 class Trainer(object):
-    def __init__(self,train_loader=None, val_loader=None, model=None, loss_fn=None, optimizer=None, scheduler=None, cuda=None, load_model_path=None, log_interval=20):
+    def __init__(self,train_loader=None, val_loader=None, model=None, loss_fn=None, optimizer=None, scheduler=None, load_model_path=None, log_interval=20):
         self.train_loader=train_loader
         self.val_loader=val_loader
         self.model=model
         self.loss_fn=loss_fn
         self.optimizer=optimizer
         self.scheduler=scheduler
-        self.cuda=cuda
         self.load_model_path = load_model_path
         self.log_interval=log_interval
         self.best_acc = 0
         self.start_epoch = 0
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # self.writer = SummaryWriter()
 
         if self.load_model_path is not None:
@@ -28,28 +28,30 @@ class Trainer(object):
             self.best_acc = checkpoint['acc']
             self.start_epoch = checkpoint['epoch']
             print(self.best_acc)
-
-        if self.cuda:
+        
+        if torch.cuda.is_available():
+            if torch.cuda.device_count() > 1:
+                self.model = nn.DataParallel(self.model)
             self.model = self.model.cuda()
 
     def train_epoch(self,epoch):
         self.model.train()
-        # self.scheduler.step()
+        if self.scheduler:
+            self.scheduler.step()
         losses = []
         total_loss = 0
         correct = 0
         total = 0
         for batch_idx,(data,label) in enumerate(self.train_loader):
-            if self.cuda:
-                data = data.cuda()
-                label = label.cuda()
+            data = data.to(self.device)
+            label = label.to(self.device)
             # 梯度归零
             self.optimizer.zero_grad()
             # 前向传播
             outputs = self.model(data)
             _, predicted = outputs.max(1)
             total += label.size(0)
-            correct += (predicted==label).sum().item()
+            correct += predicted.eq(label.view_as(predicted)).sum().item()
             # 计算损失
             loss = self.loss_fn(outputs,label)
             losses.append(loss.item())
@@ -83,13 +85,12 @@ class Trainer(object):
         total = 0
         with torch.no_grad():
             for batch_idx,(data,label) in tqdm(enumerate(self.val_loader)):
-                if self.cuda:
-                    data = data.cuda()
-                    label = label.cuda()
+                data = data.to(self.device)
+                label = label.to(self.device)
                 outputs = self.model(data)
                 _, predicted = outputs.max(1)
                 total += label.size(0)
-                correct += (predicted==label).sum().item()
+                correct += predicted.eq(label.view_as(predicted)).sum().item()
                 loss = self.loss_fn(outputs,label)
                 val_loss += loss.item()
         message = 'Val: Accuracy: {:.6f}\tLoss: {:.6f}'.format(
@@ -101,8 +102,12 @@ class Trainer(object):
         acc = 100.*correct/total
         if self.best_acc<acc:
             print('Saving..')
+            if torch.cuda.device_count() > 1:
+                state_dict = self.model.module.state_dict()
+            else:
+                state_dict = self.model.state_dict()
             state = {
-                'net': self.model.state_dict(),
+                'net': state_dict,
                 'acc': acc,
                 'epoch':epoch
             }

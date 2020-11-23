@@ -17,14 +17,17 @@ class CommomDataset(data.Dataset):
         self.indexfile = indexfile
         self.transform = transform
         self.imgs = pd.read_csv(os.path.join(root,indexfile),header = None).values # type:ndarray
-        self.class_num = 10
 
     def __getitem__(self,idx):
         img_path = os.path.join(self.root,self.imgs[idx][0])
-        data = Image.open(img_path)
+        assert os.path.exists(img_path)
+        data = Image.open(img_path).convert("RGB")
         if self.transform is not None:
             data = self.transform(data)
         label = self.imgs[idx][1] # int
+        if data.shape[0]==1: # 某些图片的channel为1
+            print(data.shape)
+            data = data.repeat(3, 1, 1)
         return data,label
     def __len__(self):
         return len(self.imgs)
@@ -44,10 +47,8 @@ if __name__ == '__main__':
         shuffle = True,
         num_workers = 8
     )
-    class_num = 10
     for i,(data,label) in enumerate(trainloader):
         data = data.cuda()
-        # label = F.one_hot(label,num_classes=class_num)
         label = label.cuda()
         print('data',data.shape)
         print('label',label.shape)

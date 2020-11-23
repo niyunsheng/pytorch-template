@@ -1,14 +1,15 @@
+#coding:utf-8
 # 生成imagenet的数据和标签列表
 import pandas as pd
 import os
 from tqdm import trange
 
-image_root = '/home/nys/tiny-imagenet-200'
+image_root = './tiny-imagenet-200'
 train_dir = 'train'
 val_dir = 'val'
 # 要写的文件
-train_file = 'tinyimagenet_train.txt'
-val_file = 'tinyimagenet_val.txt'
+train_file = 'tinyimagenet_train.csv'
+val_file = 'tinyimagenet_val.csv'
 # 写入train文件
 name_list = list(pd.read_csv(os.path.join(image_root,'wnids.txt'),header=None)[0])
 name_dict = {k:v for k,v in zip(name_list,range(200))}

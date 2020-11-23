@@ -19,6 +19,7 @@ class Trainer(object):
         self.best_acc = 0
         self.start_epoch = 0
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.modelname = model.name
         # self.writer = SummaryWriter()
 
         if self.load_model_path is not None:
@@ -31,7 +32,7 @@ class Trainer(object):
         
         if torch.cuda.is_available():
             if torch.cuda.device_count() > 1:
-                self.model = nn.DataParallel(self.model)
+                self.model = torch.nn.DataParallel(self.model)
             self.model = self.model.cuda()
 
     def train_epoch(self,epoch):
@@ -111,7 +112,7 @@ class Trainer(object):
                 'acc': acc,
                 'epoch':epoch
             }
-            if not os.path.isdir('checkpoint'):
-                os.mkdir('checkpoint')
-            torch.save(state, './checkpoint/{}_{}.pth'.format(self.model.name,epoch))
+            os.makedirs('checkpoint', exist_ok=True)
+            os.makedirs('checkpoint/{}'.format(self.modelname), exist_ok=True)
+            torch.save(state, './checkpoint/{}/{}.pth'.format(self.modelname,epoch))
             self.best_acc = acc

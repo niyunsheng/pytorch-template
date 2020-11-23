@@ -51,7 +51,7 @@ def main(opt):
     trainer = Trainer(train_loader=trainloader, val_loader=testloader, model=model, loss_fn=loss_fn, optimizer=optimizer, load_model_path=args.load_model_path, log_interval=args.log_interval)
 
     for epoch_idx in range(trainer.start_epoch,args.end_epoch):
-        print('--------------------epoch ',epoch_idx)
+        print('-'*12,'epoch ',epoch_idx,'-'*12)
         trainer.train_epoch(epoch_idx)
         trainer.test_epoch(epoch_idx)
 
@@ -68,7 +68,7 @@ if __name__ == '__main__':
     arg('--batch-size', type=int, default=32)
     arg('--num-workers', type=int, default=8)
     arg('--shuffle', type=bool, default=True)
-    arg('--lr', type=float, default=0.1)
+    arg('--lr', type=float, default=0.001)
     arg('--lr-decay', type=float, default=0.95)
     arg('--weight-decay', type=float, default=0)
     arg('--log_interval', type=int, default=20)
